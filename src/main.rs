@@ -16,5 +16,5 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     println!("Selected output path {}", args.output);
-    leetcode_api_client::get_submissions().await;
+    leetcode_api_client::display_first_submission_details().await;
 }
