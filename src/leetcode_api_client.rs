@@ -1,19 +1,24 @@
 use gql_client;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::env;
-use serde::Serialize;
 
 use crate::graphql_queries;
-use crate::models::{Data, SubmissionDetailsResponse};
-
+use crate::models::{SubmissionDetailsResponse, SubmissionListResponse};
 
 pub const BASE_URL: &str = "https://leetcode.com";
 pub const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
 
 #[derive(Serialize)]
-struct Vars {
+struct PaginationVars {
     offset: u32,
     limit: u32,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct QueryBySubmissionIdVars {
+    submission_id: u32,
 }
 
 pub async fn get_csrf(client: &reqwest::Client) -> String {
@@ -37,15 +42,19 @@ pub async fn get_csrf(client: &reqwest::Client) -> String {
         .to_owned()
 }
 
-pub async fn display_submissions() {
+pub async fn get_submissions() {
     let leetcode_session_cookie = env::var("LEETCODE_SESSION_COOKIE");
     match leetcode_session_cookie {
         Ok(leetcode_session_cookie) => {
             println!("found cookie {}", leetcode_session_cookie);
             let client = reqwest::Client::new();
             let csrf_token = get_csrf(&client).await;
-            
-            let cookie_value = format!("csrftoken={}; LEETCODE_SESSION={};", csrf_token.clone(), leetcode_session_cookie);
+
+            let cookie_value = format!(
+                "csrftoken={}; LEETCODE_SESSION={};",
+                csrf_token.clone(),
+                leetcode_session_cookie
+            );
 
             let mut headers = HashMap::new();
             headers.insert("content-type", "application/json");
@@ -59,23 +68,45 @@ pub async fn display_submissions() {
                 gql_client::Client::new_with_headers(String::from(BASE_URL) + "/graphql", headers);
 
             // Query for minimal data for now, just to test if graphql query works at all
-            let vars = Vars {
+            let vars = PaginationVars {
                 offset: 0,
                 limit: 20,
             };
 
-            let data = graphql_client.query_with_vars::<Data, Vars>(graphql_queries::query_submission_list, vars)
-                .await.expect("graphql query error").expect("error, submission list not found");
+            let accepted_submissions = graphql_client
+                .query_with_vars::<SubmissionListResponse, PaginationVars>(
+                    graphql_queries::QUERY_SUBMISSION_LIST,
+                    vars,
+                )
+                .await
+                .expect("graphql query error")
+                .expect("error, submission list not found")
+                .submission_list
+                .submissions
+                .into_iter()
+                .filter(|s| s.status_display == "Accepted")
+                .collect::<Vec<_>>();
 
-            let submissions = data.submission_list.submissions.into_iter().filter(|s|s.statusDisplay == "Accepted").collect::<Vec<_>>();
+            println!("{} accepted submissions", accepted_submissions.len());
 
+            let first_accepted_submission = &accepted_submissions[0];
 
-            println!("first submission: {:#?}", submissions[0]);
-            println!("len: {:#?}", submissions.len());
-            let submission_data = graphql_client.query_with_vars::<SubmissionDetailsResponse, &str>(graphql_queries::query_submission_details, &submissions[0].id)
-            .await.expect("graphql query error").expect("error, submission list not found");
+            let vars = QueryBySubmissionIdVars {
+                submission_id: first_accepted_submission
+                    .id
+                    .parse::<u32>()
+                    .expect("could not parse submission id into integer"),
+            };
+
+            let submission_data = graphql_client
+                .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
+                    graphql_queries::QUERY_SUBMISSION_DETAILS,
+                    vars,
+                )
+                .await
+                .expect("graphql query error")
+                .expect("error, submission list not found");
             println!("submission_data: {:#?}", submission_data);
-
 
             println!("all good");
         }
