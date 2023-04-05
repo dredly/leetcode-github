@@ -1,46 +1,44 @@
 use serde::Deserialize;
 
+// --------- SubmissionList Resource ----------------------
+
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[derive(Debug)]
 pub struct Submission {
     pub id: String,
     lang: String,
-    pub statusDisplay: String,
+    pub status_display: String,
     title: String,
-    titleSlug: String
+    title_slug: String,
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Debug)]
-
+#[derive(Deserialize, Debug)]
 pub struct SubmissionList {
-    pub submissions: Vec<Submission>
+    pub submissions: Vec<Submission>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Debug)]
-pub struct Data {
-    pub submission_list: SubmissionList
+pub struct SubmissionListResponse {
+    pub submission_list: SubmissionList,
+}
+
+// --------- SubmissionDetails Resource ----------------------
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
+pub struct Question {
+    question_id: String,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[derive(Debug)]
-pub struct question {
-    questionId: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Debug)]
-pub struct submissionDetails {
-    pub runtime: u32,
-    pub runtimeDisplay: String,
-    pub runtimePercentile: f32,
-    pub memoryDisplay: String, 
-    pub question: question,
+pub struct SubmissionDetails {
+    pub question: Question,
     pub code: String,
 }
 
@@ -48,5 +46,5 @@ pub struct submissionDetails {
 #[serde(rename_all = "camelCase")]
 #[derive(Debug)]
 pub struct SubmissionDetailsResponse {
-    pub submission_details: submissionDetails
+    pub submission_details: SubmissionDetails,
 }

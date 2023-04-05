@@ -1,9 +1,9 @@
 use clap::Parser;
 
-mod leetcode_api_client;
-mod repo_builder;
 mod graphql_queries;
+mod leetcode_api_client;
 mod models;
+mod repo_builder;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -16,5 +16,5 @@ struct Args {
 async fn main() {
     let args = Args::parse();
     println!("Selected output path {}", args.output);
-    leetcode_api_client::display_submissions().await;
+    leetcode_api_client::get_submissions().await;
 }
