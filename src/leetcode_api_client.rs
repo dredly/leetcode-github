@@ -1,7 +1,11 @@
-use serde::{Deserialize, Serialize};
 use gql_client;
 use std::collections::HashMap;
 use std::env;
+use serde::Serialize;
+
+use crate::graphql_queries;
+use crate::models::{Data, SubmissionDetailsResponse};
+
 
 pub const BASE_URL: &str = "https://leetcode.com";
 pub const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
@@ -11,19 +15,6 @@ struct Vars {
     offset: u32,
     limit: u32,
 }
-
-#[derive(Deserialize)]
-struct Submission {
-    id: u32,
-    lang: String
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SubmissionList {
-    submissions: Vec<Submission>
-}
-
 
 pub async fn get_csrf(client: &reqwest::Client) -> String {
     client
@@ -53,36 +44,38 @@ pub async fn display_submissions() {
             println!("found cookie {}", leetcode_session_cookie);
             let client = reqwest::Client::new();
             let csrf_token = get_csrf(&client).await;
+            
+            let cookie_value = format!("csrftoken={}; LEETCODE_SESSION={};", csrf_token.clone(), leetcode_session_cookie);
 
             let mut headers = HashMap::new();
             headers.insert("content-type", "application/json");
             headers.insert("origin", BASE_URL);
             headers.insert("referer", BASE_URL);
-            headers.insert("cookie", &leetcode_session_cookie);
-            headers.insert("x-csrftoken", &csrf_token);
+            headers.insert("cookie", &cookie_value);
+            headers.insert("x-csrftoken", csrf_token.as_str());
             headers.insert("user-agent", USER_AGENT);
 
             let graphql_client =
                 gql_client::Client::new_with_headers(String::from(BASE_URL) + "/graphql", headers);
 
             // Query for minimal data for now, just to test if graphql query works at all
-            let query = r#"
-                query ($offset: Int!, $limit: Int!) {
-                    submissionList(offset: $offset, limit: $limit) {
-                        submissions { id lang }
-                    }
-                }
-            "#;
-
             let vars = Vars {
                 offset: 0,
                 limit: 20,
             };
 
-            let submission_list = graphql_client.query_with_vars::<SubmissionList, Vars>(query, vars)
+            let data = graphql_client.query_with_vars::<Data, Vars>(graphql_queries::query_submission_list, vars)
                 .await.expect("graphql query error").expect("error, submission list not found");
 
-            let submissions = submission_list.submissions;
+            let submissions = data.submission_list.submissions.into_iter().filter(|s|s.statusDisplay == "Accepted").collect::<Vec<_>>();
+
+
+            println!("first submission: {:#?}", submissions[0]);
+            println!("len: {:#?}", submissions.len());
+            let submission_data = graphql_client.query_with_vars::<SubmissionDetailsResponse, &str>(graphql_queries::query_submission_details, &submissions[0].id)
+            .await.expect("graphql query error").expect("error, submission list not found");
+            println!("submission_data: {:#?}", submission_data);
+
 
             println!("all good");
         }

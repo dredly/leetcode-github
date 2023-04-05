@@ -1,6 +1,9 @@
 use clap::Parser;
 
 mod leetcode_api_client;
+mod repo_builder;
+mod graphql_queries;
+mod models;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
