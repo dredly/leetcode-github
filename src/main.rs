@@ -17,5 +17,5 @@ async fn main() {
     let args = Args::parse();
     println!("Selected output path {}", args.output);
     let graphql_client = leetcode_api_client::get_graphql_client().await;
-    leetcode_api_client::display_first_submission_details(&graphql_client).await;
+    leetcode_api_client::get_all_submission_details(&graphql_client, args.output).await;
 }

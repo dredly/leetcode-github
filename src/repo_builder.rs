@@ -9,22 +9,26 @@
 */
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
 
-pub fn create_dir_structure(
+pub fn create_output(
+    output_dir: &str,
+    submission_id: u32, 
     problem_id: i32,
     problem_blob: &str,
     language: &str,
-    language_extension: &str,
-) -> std::io::Result<()> {
-    //
-    let problem_blob_lower = problem_blob.to_lowercase();
-    let desired_path = &format!("/home/lap/{problem_id}-{problem_blob}/{language}/{problem_blob_lower}.{language_extension}");
+    code: &str,
+) {
+    let problem_str = &format!("{problem_id:0>4}-{problem_blob}");
+    let mut path: PathBuf = [output_dir, problem_str, language].iter().collect();
 
-    fs::create_dir_all(Path::new(desired_path))?;
-    Ok(())
+    fs::create_dir_all(&path);
+    let program_file = format!("{problem_blob}_{submission_id}.py");
+    path.push(&program_file);
+    fs::write(&path, code);
 }
 
 #[test]
-fn test_create_dir_structure() -> std::io::Result<()> {
-    create_dir_structure(2, "Two-Sum", "Python", "py")
+fn test_create_dir_structure() {
+    create_output("/home/lap", 2, "Two-Sum", "Python", "print(5)")
 }

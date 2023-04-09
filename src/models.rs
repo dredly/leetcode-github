@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 
 // --------- SubmissionList Resource ----------------------
 
@@ -10,7 +11,7 @@ pub struct Submission {
     lang: String,
     pub status_display: String,
     title: String,
-    title_slug: String,
+    pub title_slug: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -31,7 +32,15 @@ pub struct SubmissionListResponse {
 #[serde(rename_all = "camelCase")]
 #[derive(Debug)]
 pub struct Question {
-    question_id: String,
+    pub question_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
+pub struct Languages {
+    pub name: String,
+    verbose_name: String,
 }
 
 #[derive(Deserialize)]
@@ -40,6 +49,7 @@ pub struct Question {
 pub struct SubmissionDetails {
     pub question: Question,
     pub code: String,
+    pub lang: Languages,
 }
 
 #[derive(Deserialize)]

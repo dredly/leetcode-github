@@ -13,6 +13,10 @@ query submissionDetails($submissionId: Int!) {
       question {
         questionId
       }
+      lang {
+        name
+        verboseName
+      }
     }
   }
 "#;
