@@ -1,13 +1,17 @@
+use futures::{stream, StreamExt};
 use gql_client;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::env;
 
 use crate::graphql_queries;
-use crate::models::{Submission, SubmissionDetailsResponse, SubmissionListResponse};
+use crate::models::{
+    Submission, SubmissionDetails, SubmissionDetailsResponse, SubmissionListResponse,
+};
 
-pub const BASE_URL: &str = "https://leetcode.com";
-pub const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
+const CONCURRENT_REQUESTS: usize = 2;
+const BASE_URL: &str = "https://leetcode.com";
+const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
 
 #[derive(Serialize)]
 struct PaginationVars {
@@ -21,7 +25,7 @@ struct QueryBySubmissionIdVars {
     submission_id: u32,
 }
 
-pub async fn get_csrf(client: &reqwest::Client) -> String {
+async fn get_csrf(client: &reqwest::Client) -> String {
     client
         .get(BASE_URL)
         .header("user-agent", USER_AGENT)
@@ -66,7 +70,6 @@ pub async fn get_graphql_client() -> gql_client::Client {
 }
 
 async fn get_accepted_submissions(graphql_client: &gql_client::Client) -> Vec<Submission> {
-    
     // Query for minimal data for now, just to test if graphql query works at all
     let vars = PaginationVars {
         offset: 0,
@@ -90,25 +93,33 @@ async fn get_accepted_submissions(graphql_client: &gql_client::Client) -> Vec<Su
     accepted_submissions
 }
 
-async fn display_submission_details(submission_id: u32, graphql_client: &gql_client::Client) {    
+pub async fn get_submission_details(
+    graphql_client: &gql_client::Client,
+    submission: Submission,
+) -> SubmissionDetails {
+    let submission_id = submission
+        .id
+        .parse::<u32>()
+        .expect("could not parse submission id into integer");
+
     let vars = QueryBySubmissionIdVars {
         submission_id: submission_id,
     };
-    let submission_data = graphql_client
+    graphql_client
         .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
             graphql_queries::QUERY_SUBMISSION_DETAILS,
             vars,
         )
         .await
         .expect("graphql query error")
-        .expect("error, submission list not found");
-    println!("submission_data: {:#?}", submission_data);
+        .expect("error, submission list not found")
+        .submission_details
 }
 
-pub async fn display_first_submission_details(graphql_client: &gql_client::Client) {
-    let first_accepted_solution_id = &get_accepted_submissions(graphql_client).await[0]
-        .id
-        .parse::<u32>()
-        .expect("could not parse submission id into integer");
-    display_submission_details(*first_accepted_solution_id, graphql_client).await;
+pub async fn get_all_submission_details(graphql_client: &gql_client::Client) -> Vec<SubmissionDetails> {
+    stream::iter(get_accepted_submissions(graphql_client).await)
+        .map(|submission| get_submission_details(graphql_client, submission))
+        .buffer_unordered(CONCURRENT_REQUESTS)
+        .collect::<Vec<_>>()
+        .await
 }
