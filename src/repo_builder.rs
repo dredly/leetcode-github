@@ -13,7 +13,7 @@ use std::path::PathBuf;
 
 pub fn create_output(
     output_dir: &str,
-    submission_id: u32, 
+    submission_id: u32,
     problem_id: i32,
     problem_blob: &str,
     language: &str,
@@ -30,5 +30,5 @@ pub fn create_output(
 
 #[test]
 fn test_create_dir_structure() {
-    create_output("/home/lap", 2, "Two-Sum", "Python", "print(5)")
+    create_output("/home/lap", 2, 55, "Python", "py", "print(5)")
 }

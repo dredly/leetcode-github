@@ -1,17 +1,17 @@
+use futures::{stream, StreamExt};
 use gql_client;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::{env, future};
-use std::future::IntoFuture;
-use std::iter::Filter;
-use futures::future::join_all;
+use std::env;
 
 use crate::graphql_queries;
-use crate::models::{Submission, SubmissionDetailsResponse, SubmissionListResponse, SubmissionDetails};
-use crate::repo_builder;
+use crate::models::{
+    Submission, SubmissionDetails, SubmissionDetailsResponse, SubmissionListResponse,
+};
 
-pub const BASE_URL: &str = "https://leetcode.com";
-pub const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
+const CONCURRENT_REQUESTS: usize = 2;
+const BASE_URL: &str = "https://leetcode.com";
+const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
 
 #[derive(Serialize)]
 struct PaginationVars {
@@ -25,7 +25,7 @@ struct QueryBySubmissionIdVars {
     submission_id: u32,
 }
 
-pub async fn get_csrf(client: &reqwest::Client) -> String {
+async fn get_csrf(client: &reqwest::Client) -> String {
     client
         .get(BASE_URL)
         .header("user-agent", USER_AGENT)
@@ -87,7 +87,8 @@ async fn get_accepted_submissions(graphql_client: &gql_client::Client) -> Vec<Su
         .submission_list
         .submissions
         .into_iter()
-        .filter(|s| s.status_display == "Accepted").collect::<Vec<_>>();
+        .filter(|s| s.status_display == "Accepted")
+        .collect::<Vec<_>>();
 
     accepted_submissions
 }
@@ -129,9 +130,10 @@ pub async fn get_submission_details(
     graphql_client: &gql_client::Client,
     submission: Submission,
 ) -> SubmissionDetails {
-    let submission_id = submission.id
-    .parse::<u32>()
-    .expect("could not parse submission id into integer");
+    let submission_id = submission
+        .id
+        .parse::<u32>()
+        .expect("could not parse submission id into integer");
 
     let vars = QueryBySubmissionIdVars {
         submission_id: submission_id,
@@ -143,17 +145,14 @@ pub async fn get_submission_details(
         )
         .await
         .expect("graphql query error")
-        .expect("error, submission list not found").submission_details
+        .expect("error, submission list not found")
+        .submission_details
 }
 
-
-pub async fn get_all_submission_details(
-    graphql_client: &gql_client::Client,
-    output_dir: String,
-) {
-    let accepted_solution_details_futures = &get_accepted_submissions(graphql_client).await.into_iter()
-        .map(|x| get_submission_details(graphql_client, x)).into_iter();
-
-    let res = join_all(accepted_solution_details_futures);
-
+pub async fn get_all_submission_details(graphql_client: &gql_client::Client) -> Vec<SubmissionDetails> {
+    stream::iter(get_accepted_submissions(graphql_client).await)
+        .map(|submission| get_submission_details(graphql_client, submission))
+        .buffer_unordered(CONCURRENT_REQUESTS)
+        .collect::<Vec<_>>()
+        .await
 }
