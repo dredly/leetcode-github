@@ -116,7 +116,9 @@ pub async fn get_submission_details(
         .submission_details
 }
 
-pub async fn get_all_submission_details(graphql_client: &gql_client::Client) -> Vec<SubmissionDetails> {
+pub async fn get_all_submission_details(
+    graphql_client: &gql_client::Client,
+) -> Vec<SubmissionDetails> {
     stream::iter(get_accepted_submissions(graphql_client).await)
         .map(|submission| get_submission_details(graphql_client, submission))
         .buffer_unordered(CONCURRENT_REQUESTS)

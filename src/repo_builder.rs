@@ -11,6 +11,9 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 
+use crate::LANGUAGE_NAMES_TO_EXTENSIONS;
+use crate::models::SubmissionDetails;
+
 pub fn create_output(
     output_dir: &str,
     submission_id: u32,
@@ -26,6 +29,13 @@ pub fn create_output(
     let program_file = format!("{problem_blob}_{submission_id}.py");
     path.push(&program_file);
     fs::write(&path, code);
+}
+
+pub fn display_submission_name(submission_details: &SubmissionDetails) {
+    let language_name = &submission_details.lang.name;
+    let extension = *LANGUAGE_NAMES_TO_EXTENSIONS.get(language_name.as_str()).unwrap_or(&"txt");
+    let filename = &format!("test_question.{extension}");
+    println!("This submission will be saved as {}", filename);
 }
 
 #[test]

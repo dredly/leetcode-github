@@ -1,9 +1,18 @@
+#[macro_use]
+extern crate lazy_static;
+
 use clap::Parser;
+use std::collections::HashMap;
 
 mod graphql_queries;
 mod leetcode_api_client;
 mod models;
 mod repo_builder;
+
+lazy_static! {
+    static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> =
+        HashMap::from([("rust", "rs"), ("python", "py")]);
+}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -18,5 +27,9 @@ async fn main() {
     println!("Selected output path {}", args.output);
     let graphql_client = leetcode_api_client::get_graphql_client().await;
     let submission_details = leetcode_api_client::get_all_submission_details(&graphql_client).await;
-    println!("Found details for {} accepted solutions", submission_details.len());
+    repo_builder::display_submission_name(&submission_details[0]);
+    println!(
+        "Found details for {} accepted solutions",
+        submission_details.len()
+    );
 }

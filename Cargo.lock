@@ -530,6 +530,7 @@ dependencies = [
  "clap",
  "futures",
  "gql_client",
+ "lazy_static",
  "reqwest",
  "serde",
  "tokio",
