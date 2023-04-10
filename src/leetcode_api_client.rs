@@ -93,39 +93,6 @@ async fn get_accepted_submissions(graphql_client: &gql_client::Client) -> Vec<Su
     accepted_submissions
 }
 
-async fn display_submission_details(
-    graphql_client: &gql_client::Client,
-    submission_id: u32,
-    submission_title_slug: &str,
-    output_dir: String,
-) {
-    let vars = QueryBySubmissionIdVars {
-        submission_id: submission_id,
-    };
-    let submission_data = graphql_client
-        .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
-            graphql_queries::QUERY_SUBMISSION_DETAILS,
-            vars,
-        )
-        .await
-        .expect("graphql query error")
-        .expect("error, submission list not found");
-    println!("submission_data: {:#?}", submission_data);
-    // repo_builder::create_output(
-    //     &output_dir,
-    //     submission_id,
-    //     submission_data
-    //         .submission_details
-    //         .question
-    //         .question_id
-    //         .parse()
-    //         .unwrap(),
-    //     submission_title_slug,
-    //     &submission_data.submission_details.lang.name,
-    //     &submission_data.submission_details.code,
-    // );
-}
-
 pub async fn get_submission_details(
     graphql_client: &gql_client::Client,
     submission: Submission,
