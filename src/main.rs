@@ -27,7 +27,8 @@ async fn main() {
     println!("Selected output path {}", args.output);
     let graphql_client = leetcode_api_client::get_graphql_client().await;
     let submission_details = leetcode_api_client::get_all_submission_details(&graphql_client).await;
-    repo_builder::display_submission_name(&submission_details[0]);
+    repo_builder::initialise_repo(&args.output).expect("Big time fail");
+    repo_builder::add_submission_to_repo(&args.output, &submission_details[0]).expect("BIG TIME FAIL");
     println!(
         "Found details for {} accepted solutions",
         submission_details.len()

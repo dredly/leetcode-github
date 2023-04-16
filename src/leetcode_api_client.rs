@@ -6,7 +6,7 @@ use std::env;
 
 use crate::graphql_queries;
 use crate::models::{
-    Submission, SubmissionDetails, SubmissionDetailsResponse, SubmissionListResponse,
+    Submission, SubmissionDetails, SubmissionDetailsResponse, SubmissionListResponse, EnhancedSubmissionDetails,
 };
 
 const CONCURRENT_REQUESTS: usize = 2;
@@ -93,19 +93,19 @@ async fn get_accepted_submissions(graphql_client: &gql_client::Client) -> Vec<Su
     accepted_submissions
 }
 
-pub async fn get_submission_details(
+pub async fn get_enhanced_submission_details(
     graphql_client: &gql_client::Client,
     submission: Submission,
-) -> SubmissionDetails {
+) -> EnhancedSubmissionDetails {
     let submission_id = submission
         .id
         .parse::<u32>()
         .expect("could not parse submission id into integer");
 
     let vars = QueryBySubmissionIdVars {
-        submission_id: submission_id,
+        submission_id,
     };
-    graphql_client
+    let submission_details = graphql_client
         .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
             graphql_queries::QUERY_SUBMISSION_DETAILS,
             vars,
@@ -113,14 +113,20 @@ pub async fn get_submission_details(
         .await
         .expect("graphql query error")
         .expect("error, submission list not found")
-        .submission_details
+        .submission_details;
+    EnhancedSubmissionDetails {
+        submission_details,
+        title_slug: submission.title_slug,
+        submission_id: submission.id
+    }
+    
 }
 
 pub async fn get_all_submission_details(
     graphql_client: &gql_client::Client,
-) -> Vec<SubmissionDetails> {
+) -> Vec<EnhancedSubmissionDetails> {
     stream::iter(get_accepted_submissions(graphql_client).await)
-        .map(|submission| get_submission_details(graphql_client, submission))
+        .map(|submission| get_enhanced_submission_details(graphql_client, submission))
         .buffer_unordered(CONCURRENT_REQUESTS)
         .collect::<Vec<_>>()
         .await

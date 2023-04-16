@@ -39,7 +39,7 @@ pub struct Question {
 #[derive(Debug)]
 pub struct Languages {
     pub name: String,
-    verbose_name: String,
+    pub verbose_name: String,
 }
 
 #[derive(Deserialize)]
@@ -49,6 +49,12 @@ pub struct SubmissionDetails {
     pub question: Question,
     pub code: String,
     pub lang: Languages,
+}
+
+pub struct EnhancedSubmissionDetails {
+    pub submission_details: SubmissionDetails,
+    pub title_slug: String,
+    pub submission_id: String
 }
 
 #[derive(Deserialize)]
