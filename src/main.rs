@@ -10,8 +10,12 @@ mod models;
 mod repo_builder;
 
 lazy_static! {
-    static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> =
-        HashMap::from([("rust", "rs"), ("python", "py")]);
+    static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> = HashMap::from([
+        ("rust", "rs"),
+        ("python", "py"),
+        ("python3", "py"),
+        ("elixir", "ex")
+    ]);
 }
 
 #[derive(Parser)]
@@ -28,7 +32,12 @@ async fn main() {
     let graphql_client = leetcode_api_client::get_graphql_client().await;
     let submission_details = leetcode_api_client::get_all_submission_details(&graphql_client).await;
     repo_builder::initialise_repo(&args.output).expect("Big time fail");
-    repo_builder::add_submission_to_repo(&args.output, &submission_details[0]).expect("BIG TIME FAIL");
+
+    for submission_detail in &submission_details {
+        repo_builder::add_submission_to_repo(&args.output, submission_detail)
+            .expect("BIG TIME FAIL");
+    }
+
     println!(
         "Found details for {} accepted solutions",
         submission_details.len()

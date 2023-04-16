@@ -13,9 +13,12 @@ pub struct Submission {
     pub title_slug: String,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct SubmissionList {
     pub submissions: Vec<Submission>,
+    pub has_next: bool,
 }
 
 #[derive(Deserialize)]
@@ -54,7 +57,7 @@ pub struct SubmissionDetails {
 pub struct EnhancedSubmissionDetails {
     pub submission_details: SubmissionDetails,
     pub title_slug: String,
-    pub submission_id: String
+    pub submission_id: String,
 }
 
 #[derive(Deserialize)]
