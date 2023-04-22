@@ -1,10 +1,12 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use futures::Future;
+
 
 const backoff_times: [f64; 7] = [0.5, 1.0, 1.5, 3.0, 5.0, 10.0, 20.0];
 
-
-pub fn retry<T, E>(func: fn() -> Result<T, E>) -> Result<T, E> {
+// TODO MAKE ASYNC PRETTY PLEASE
+pub fn retry<T, E>(func: fn() -> Future<Result<T, E>>) -> Result<T, E> {
     println!("enter function");
 
     let mut res = func();
@@ -25,8 +27,6 @@ pub fn retry<T, E>(func: fn() -> Result<T, E>) -> Result<T, E> {
 }
 
 fn dummy_func() -> Result<u8, &'static str> {
-    const data: [u8; 5] = [1, 2, 3, 4, 5];
-
     let parity = SystemTime::now()
     .duration_since(UNIX_EPOCH)
     .unwrap()
@@ -40,7 +40,31 @@ fn dummy_func() -> Result<u8, &'static str> {
     }
 }
 
+fn dummy_func2(whatever: &str) -> Result<u8, &'static str> {
+    let parity = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap()
+    .as_millis() % 2;
+
+    println!("{}", whatever);
+
+    if parity == 0{
+        Ok(19)
+    }
+    else {
+        Err("STOP get help")
+    }
+}
+
 #[test]
 fn test_retry() {
     retry(dummy_func);
+}
+
+#[test]
+fn test_retry_w_args() {
+    fn dummy_func_callback() -> Result<u8, &'static str> {
+        dummy_func2("hardcoded thing")
+    }
+    retry(dummy_func_callback);
 }
