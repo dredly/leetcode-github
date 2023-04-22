@@ -8,6 +8,7 @@ mod graphql_queries;
 mod leetcode_api_client;
 mod models;
 mod repo_builder;
+mod utils;
 
 lazy_static! {
     static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> = HashMap::from([
