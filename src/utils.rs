@@ -4,7 +4,6 @@ use futures::Future;
 
 const backoff_times: [f64; 7] = [0.5, 1.0, 1.5, 3.0, 5.0, 10.0, 20.0];
 
-// TODO MAKE ASYNC PRETTY PLEASE
 pub async fn retry_with_backoff<T, E, F>(func: fn() -> F) -> Result<T, E>
 where
     F: Future<Output = Result<T, E>>,

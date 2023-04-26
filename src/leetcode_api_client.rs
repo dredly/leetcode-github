@@ -6,10 +6,9 @@ use std::env;
 
 use crate::graphql_queries;
 use crate::models::{
-    EnhancedSubmissionDetails, Submission, SubmissionDetails, SubmissionDetailsResponse,
+    EnhancedSubmissionDetails, Submission, SubmissionDetailsResponse,
     SubmissionListResponse,
 };
-use crate::utils::retry_with_backoff;
 
 const PAGINATION_LIMIT: u32 = 20;
 const CONCURRENT_REQUESTS: usize = 1;
@@ -164,6 +163,7 @@ pub async fn get_enhanced_submission_details(
     }
 }
 
+// TODO: Use our shiny new retry backoff function to get enhanced submission details
 pub async fn get_all_submission_details(
     graphql_client: &gql_client::Client,
 ) -> Vec<EnhancedSubmissionDetails> {
