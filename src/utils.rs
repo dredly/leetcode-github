@@ -2,14 +2,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use futures::Future;
 
-
 const backoff_times: [f64; 7] = [0.5, 1.0, 1.5, 3.0, 5.0, 10.0, 20.0];
 
 // TODO MAKE ASYNC PRETTY PLEASE
-pub fn retry<T, E>(func: fn() -> Future<Result<T, E>>) -> Result<T, E> {
+pub async fn retry_with_backoff<T, E, F>(func: fn() -> F) -> Result<T, E>
+where
+    F: Future<Output = Result<T, E>>,
+{
     println!("enter function");
 
-    let mut res = func();
+    let res = func().await;
 
     if res.is_ok() {
         return res;
@@ -17,54 +19,57 @@ pub fn retry<T, E>(func: fn() -> Future<Result<T, E>>) -> Result<T, E> {
 
     for backoff_time in backoff_times {
         println!("using backoff_time={}", backoff_time);
-        std::thread::sleep(std::time::Duration::from_millis((backoff_time * 1000.0) as u64));
-        res = func();
-        if res.is_ok() {
-            return res;
+        std::thread::sleep(std::time::Duration::from_millis(
+            (backoff_time * 1000.0) as u64,
+        ));
+        let res_retried = func().await;
+        if res_retried.is_ok() {
+            return res_retried;
         }
     }
     res
 }
 
-fn dummy_func() -> Result<u8, &'static str> {
+async fn dummy_async_func() -> Result<u8, &'static str> {
     let parity = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .unwrap()
-    .as_millis() % 2;
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+        % 2;
 
     if parity == 0 {
         Ok(19)
-    }
-    else {
+    } else {
         Err("STOP get help")
     }
 }
 
-fn dummy_func2(whatever: &str) -> Result<u8, &'static str> {
+#[tokio::test]
+async fn test_retry() {
+    retry_with_backoff(dummy_async_func)
+        .await
+        .expect("Retry backoff timed out");
+}
+
+async fn dummy_async_fn_with_arg(whatever: &str) -> Result<u8, &'static str> {
     let parity = SystemTime::now()
-    .duration_since(UNIX_EPOCH)
-    .unwrap()
-    .as_millis() % 2;
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
+        % 2;
 
     println!("{}", whatever);
 
-    if parity == 0{
+    if parity == 0 {
         Ok(19)
-    }
-    else {
+    } else {
         Err("STOP get help")
     }
 }
 
-#[test]
-fn test_retry() {
-    retry(dummy_func);
-}
-
-#[test]
-fn test_retry_w_args() {
-    fn dummy_func_callback() -> Result<u8, &'static str> {
-        dummy_func2("hardcoded thing")
-    }
-    retry(dummy_func_callback);
+#[tokio::test]
+async fn test_retry_with_arg() {
+    retry_with_backoff(|| dummy_async_fn_with_arg("hello there"))
+        .await
+        .expect("Retry backoff timed out");
 }
