@@ -7,9 +7,7 @@ use serde::Deserialize;
 #[derive(Debug)]
 pub struct Submission {
     pub id: String,
-    lang: String,
     pub status_display: String,
-    title: String,
     pub title_slug: String,
 }
 

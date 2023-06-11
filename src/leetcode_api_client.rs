@@ -8,7 +8,6 @@ use crate::graphql_queries;
 use crate::models::{
     EnhancedSubmissionDetails, Submission, SubmissionDetailsResponse, SubmissionListResponse,
 };
-use crate::utils::retry_with_backoff;
 
 const PAGINATION_LIMIT: u32 = 20;
 const CONCURRENT_REQUESTS: usize = 3;
@@ -25,27 +24,6 @@ struct PaginationVars {
 #[serde(rename_all = "camelCase")]
 struct QueryBySubmissionIdVars {
     submission_id: u32,
-}
-
-async fn get_csrf(client: &reqwest::Client) -> String {
-    client
-        .get(BASE_URL)
-        .header("user-agent", USER_AGENT)
-        .send()
-        .await
-        .expect("Error sending request")
-        .headers()
-        .get("set-cookie")
-        .expect("Could not find set cookie header")
-        .to_str()
-        .expect("Error reading cookie as string")
-        .split_once(";")
-        .unwrap()
-        .0
-        .split_once("=")
-        .unwrap()
-        .1
-        .to_owned()
 }
 
 pub async fn get_graphql_client() -> gql_client::Client {
@@ -71,12 +49,43 @@ pub async fn get_graphql_client() -> gql_client::Client {
     gql_client::Client::new_with_headers(String::from(BASE_URL) + "/graphql", headers)
 }
 
+pub async fn get_all_submission_details(
+    graphql_client: &gql_client::Client,
+) -> Vec<EnhancedSubmissionDetails> {
+    stream::iter(get_all_accepted_submissions(graphql_client).await)
+        .map(|submission| get_enhanced_submission_details(graphql_client, submission))
+        .buffer_unordered(CONCURRENT_REQUESTS)
+        .collect::<Vec<_>>()
+        .await
+}
+
+async fn get_csrf(client: &reqwest::Client) -> String {
+    client
+        .get(BASE_URL)
+        .header("user-agent", USER_AGENT)
+        .send()
+        .await
+        .expect("Error sending request")
+        .headers()
+        .get("set-cookie")
+        .expect("Could not find set cookie header")
+        .to_str()
+        .expect("Error reading cookie as string")
+        .split_once(";")
+        .unwrap()
+        .0
+        .split_once("=")
+        .unwrap()
+        .1
+        .to_owned()
+}
+
 async fn get_accepted_submissions(
     graphql_client: &gql_client::Client,
     offset: u32,
 ) -> (Vec<Submission>, bool) {
     let vars = PaginationVars {
-        offset: offset,
+        offset,
         limit: PAGINATION_LIMIT,
     };
 
@@ -141,7 +150,7 @@ async fn try_to_get_submission_details(
         .await
 }
 
-pub async fn get_enhanced_submission_details(
+async fn get_enhanced_submission_details(
     graphql_client: &gql_client::Client,
     submission: Submission,
 ) -> EnhancedSubmissionDetails {
@@ -152,30 +161,15 @@ pub async fn get_enhanced_submission_details(
 
     let vars = QueryBySubmissionIdVars { submission_id };
 
-    let submission_details = retry_with_backoff(|| try_to_get_submission_details(graphql_client, vars))
+    let submission_details = try_to_get_submission_details(graphql_client, vars)
+        .await
         .expect(&format!("graphql query error {submission_id}"))
         .expect("error, submission list not found")
         .submission_details;
-
-    let now = std::time::SystemTime::now();
-    println!("{:?}", now);
-    std::thread::sleep(std::time::Duration::from_millis(1000));
-    println!("SLEEPING...");
 
     EnhancedSubmissionDetails {
         submission_details,
         title_slug: submission.title_slug,
         submission_id: submission.id,
     }
-}
-
-// TODO: Use our shiny new retry backoff function to get enhanced submission details
-pub async fn get_all_submission_details(
-    graphql_client: &gql_client::Client,
-) -> Vec<EnhancedSubmissionDetails> {
-    stream::iter(get_all_accepted_submissions(graphql_client).await)
-        .map(|submission| get_enhanced_submission_details(graphql_client, submission))
-        .buffer_unordered(CONCURRENT_REQUESTS)
-        .collect::<Vec<_>>()
-        .await
 }

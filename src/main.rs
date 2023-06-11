@@ -8,14 +8,21 @@ mod graphql_queries;
 mod leetcode_api_client;
 mod models;
 mod repo_builder;
-mod utils;
 
 lazy_static! {
     static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> = HashMap::from([
         ("rust", "rs"),
         ("python", "py"),
         ("python3", "py"),
-        ("elixir", "ex")
+        ("elixir", "ex"),
+        ("java", "java"),
+        ("cpp", "cpp"),
+        ("typescript", "ts"),
+        ("javascript", "js"),
+        ("c", "c"),
+        ("csharp", "cs"),
+        ("ruby", "rb"),
+        ("golang", "go")
     ]);
 }
 
@@ -32,11 +39,11 @@ async fn main() {
     println!("Selected output path {}", args.output);
     let graphql_client = leetcode_api_client::get_graphql_client().await;
     let submission_details = leetcode_api_client::get_all_submission_details(&graphql_client).await;
-    repo_builder::initialise_repo(&args.output).expect("Big time fail");
+    repo_builder::initialise_repo(&args.output).expect("Failed initialising repository");
 
     for submission_detail in &submission_details {
         repo_builder::add_submission_to_repo(&args.output, submission_detail)
-            .expect("BIG TIME FAIL");
+            .expect("Failed adding submission to repository");
     }
 
     println!(
