@@ -12,3 +12,5 @@ tokio = { version = "1", features = ["full"] }
 gql_client = "1.0.7"
 serde = { version = "1.0.155", features = ["derive"] }
 futures = {version = "0.3.4"}
+lazy_static = {version = "1.4.0"}
+backoff = "0.4.0"
