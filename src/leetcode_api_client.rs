@@ -6,12 +6,12 @@ use std::env;
 
 use crate::graphql_queries;
 use crate::models::{
-    EnhancedSubmissionDetails, Submission, SubmissionDetailsResponse,
-    SubmissionListResponse,
+    EnhancedSubmissionDetails, Submission, SubmissionDetailsResponse, SubmissionListResponse,
 };
+use crate::utils::retry_with_backoff;
 
 const PAGINATION_LIMIT: u32 = 20;
-const CONCURRENT_REQUESTS: usize = 1;
+const CONCURRENT_REQUESTS: usize = 3;
 const BASE_URL: &str = "https://leetcode.com";
 const USER_AGENT: &str = "Mozilla/5.0 LeetCode API";
 
@@ -75,7 +75,6 @@ async fn get_accepted_submissions(
     graphql_client: &gql_client::Client,
     offset: u32,
 ) -> (Vec<Submission>, bool) {
-    // Query for minimal data for now, just to test if graphql query works at all
     let vars = PaginationVars {
         offset: offset,
         limit: PAGINATION_LIMIT,
@@ -130,6 +129,18 @@ async fn get_all_accepted_submissions(graphql_client: &gql_client::Client) -> Ve
     all_accepted_submission
 }
 
+async fn try_to_get_submission_details(
+    graphql_client: &gql_client::Client,
+    vars: QueryBySubmissionIdVars,
+) -> Result<Option<SubmissionDetailsResponse>, gql_client::GraphQLError> {
+    graphql_client
+        .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
+            graphql_queries::QUERY_SUBMISSION_DETAILS,
+            vars,
+        )
+        .await
+}
+
 pub async fn get_enhanced_submission_details(
     graphql_client: &gql_client::Client,
     submission: Submission,
@@ -141,12 +152,7 @@ pub async fn get_enhanced_submission_details(
 
     let vars = QueryBySubmissionIdVars { submission_id };
 
-    let submission_details = graphql_client
-        .query_with_vars::<SubmissionDetailsResponse, QueryBySubmissionIdVars>(
-            graphql_queries::QUERY_SUBMISSION_DETAILS,
-            vars,
-        )
-        .await
+    let submission_details = retry_with_backoff(|| try_to_get_submission_details(graphql_client, vars))
         .expect(&format!("graphql query error {submission_id}"))
         .expect("error, submission list not found")
         .submission_details;
