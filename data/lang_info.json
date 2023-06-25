@@ -1,0 +1,46 @@
+[
+    {
+        "lang_name": "rust",
+        "extension": "rs"
+    },
+    {
+        "lang_name": "python",
+        "extension": "py"
+    },
+    {
+        "lang_name": "python3",
+        "extension": "py"
+    },
+    {
+        "lang_name": "java",
+        "extension": "java"
+    },
+    {
+        "lang_name": "elixir",
+        "extension": "ex"
+    },
+    {
+        "lang_name": "cpp",
+        "extension": "cpp"
+    },
+    {
+        "lang_name": "typescript",
+        "extension": "ts"
+    },
+    {
+        "lang_name": "javascript",
+        "extension": "js"
+    },
+    {
+        "lang_name": "c",
+        "extension": "c"
+    },
+    {
+        "lang_name": "csharp",
+        "extension": "cs"
+    },
+    {
+        "lang_name": "golang",
+        "extension": "go"
+    }
+]

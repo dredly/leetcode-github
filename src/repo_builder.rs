@@ -1,12 +1,31 @@
-use std::fs;
+use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::Read;
 use std::path::PathBuf;
 
+use serde::Deserialize;
+
 use crate::models::EnhancedSubmissionDetails;
-use crate::LANGUAGE_NAMES_TO_EXTENSIONS;
+
+const PATH_TO_LANG_INFO_FILE: &str = "./data/lang_info.json";
+
+#[derive(Deserialize)]
+struct LangToExtensionMapping {
+    lang_name: String,
+    extension: String
+}
+
+pub fn initialise_repo(output_dir: &str) -> std::io::Result<()> {
+    fs::create_dir_all(&output_dir)?;
+    let path_to_readme: PathBuf = [output_dir, "README.md"].iter().collect();
+    fs::write(&path_to_readme, "Created with leetcode-repo-maker")?;
+    Ok(())
+}
 
 pub fn add_submission_to_repo(
     base_dir: &str,
     enhanced_submission_details: &EnhancedSubmissionDetails,
+    lang_names_to_extensions: &HashMap<String, String>
 ) -> std::io::Result<()> {
     let lang_dir_name = &enhanced_submission_details
         .submission_details
@@ -27,7 +46,7 @@ pub fn add_submission_to_repo(
 
     fs::create_dir_all(&path)?;
 
-    let filename = generate_filename(enhanced_submission_details);
+    let filename = generate_filename(enhanced_submission_details, lang_names_to_extensions);
     path.push(&filename);
 
     fs::write(path, &enhanced_submission_details.submission_details.code)?;
@@ -35,18 +54,29 @@ pub fn add_submission_to_repo(
     Ok(())
 }
 
-pub fn initialise_repo(output_dir: &str) -> std::io::Result<()> {
-    fs::create_dir_all(&output_dir)?;
-    let path_to_readme: PathBuf = [output_dir, "README.md"].iter().collect();
-    fs::write(&path_to_readme, "Created with leetcode-repo-maker")?;
-    Ok(())
+pub fn get_lang_to_extension_mapping() -> HashMap<String, String> {
+    let mut file = File::open(PATH_TO_LANG_INFO_FILE).expect("Failed to open lang info file");
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)
+        .expect("Failed to read the file.");
+
+    let mappings: Vec<LangToExtensionMapping> = serde_json::from_str(&contents).expect("Failed to deserialize JSON");
+    
+    let mut lang_to_extension: HashMap<String, String> = HashMap::new();
+
+    for mapping in mappings {
+        lang_to_extension.insert(mapping.lang_name, mapping.extension);
+    }
+
+    lang_to_extension
 }
 
-fn generate_filename(enhanced_submission_details: &EnhancedSubmissionDetails) -> String {
+fn generate_filename(enhanced_submission_details: &EnhancedSubmissionDetails, lang_names_to_extensions: &HashMap<String, String>) -> String {
     let language_name = &enhanced_submission_details.submission_details.lang.name;
-    let extension = *LANGUAGE_NAMES_TO_EXTENSIONS
-        .get(language_name.as_str())
-        .unwrap_or(&"txt");
+    let binding = "txt".to_string();
+    let extension = lang_names_to_extensions
+        .get(language_name)
+        .unwrap_or(&binding);
     let filename = &enhanced_submission_details.title_slug;
     let submission_id = &enhanced_submission_details.submission_id;
     format!("{filename}_{submission_id}.{extension}")

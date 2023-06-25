@@ -1,0 +1,2 @@
+- [ ] Read language hashmap in from a file
+- [ ] Retry backoff

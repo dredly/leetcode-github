@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
-
 use clap::Parser;
 use std::collections::HashMap;
 
@@ -8,23 +5,6 @@ mod graphql_queries;
 mod leetcode_api_client;
 mod models;
 mod repo_builder;
-
-lazy_static! {
-    static ref LANGUAGE_NAMES_TO_EXTENSIONS: HashMap<&'static str, &'static str> = HashMap::from([
-        ("rust", "rs"),
-        ("python", "py"),
-        ("python3", "py"),
-        ("elixir", "ex"),
-        ("java", "java"),
-        ("cpp", "cpp"),
-        ("typescript", "ts"),
-        ("javascript", "js"),
-        ("c", "c"),
-        ("csharp", "cs"),
-        ("ruby", "rb"),
-        ("golang", "go")
-    ]);
-}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -40,9 +20,10 @@ async fn main() {
     let graphql_client = leetcode_api_client::get_graphql_client().await;
     let submission_details = leetcode_api_client::get_all_submission_details(&graphql_client).await;
     repo_builder::initialise_repo(&args.output).expect("Failed initialising repository");
+    let lang_names_to_extensions = repo_builder::get_lang_to_extension_mapping();
 
     for submission_detail in &submission_details {
-        repo_builder::add_submission_to_repo(&args.output, submission_detail)
+        repo_builder::add_submission_to_repo(&args.output, submission_detail, &lang_names_to_extensions)
             .expect("Failed adding submission to repository");
     }
 
