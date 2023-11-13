@@ -12,7 +12,7 @@ const PATH_TO_LANG_INFO_FILE: &str = "./data/lang_info.json";
 #[derive(Deserialize)]
 struct LangToExtensionMapping {
     lang_name: String,
-    extension: String
+    extension: String,
 }
 
 pub fn initialise_repo(output_dir: &str) -> std::io::Result<()> {
@@ -22,10 +22,34 @@ pub fn initialise_repo(output_dir: &str) -> std::io::Result<()> {
     Ok(())
 }
 
+pub fn get_last_submission(output_dir: &str) -> Option<usize> {
+    let submission_path: PathBuf = [output_dir, ".last_submission"].iter().collect();
+    if submission_path.exists() {
+        let mut file = File::open(submission_path).expect("Unable to open file");
+        let mut contents = String::new();
+        file.read_to_string(&mut contents)
+            .expect("Unable to read file");
+
+        let parsed_value: usize = contents.trim().parse().unwrap();
+        println!("last submission read {parsed_value}");
+        Some(parsed_value)
+    } else {
+        None
+    }
+}
+
+pub fn ovewrite_last_submission(output_dir: &str, last_submission_id: &str) -> std::io::Result<()> {
+    let last_submission_path: PathBuf = [output_dir, ".last_submission"].iter().collect();
+    fs::write(&last_submission_path, last_submission_id.trim())?;
+    Ok(())
+}
+
+
+
 pub fn add_submission_to_repo(
     base_dir: &str,
     enhanced_submission_details: &EnhancedSubmissionDetails,
-    lang_names_to_extensions: &HashMap<String, String>
+    lang_names_to_extensions: &HashMap<String, String>,
 ) -> std::io::Result<()> {
     let lang_dir_name = &enhanced_submission_details
         .submission_details
@@ -60,8 +84,9 @@ pub fn get_lang_to_extension_mapping() -> HashMap<String, String> {
     file.read_to_string(&mut contents)
         .expect("Failed to read the file.");
 
-    let mappings: Vec<LangToExtensionMapping> = serde_json::from_str(&contents).expect("Failed to deserialize JSON");
-    
+    let mappings: Vec<LangToExtensionMapping> =
+        serde_json::from_str(&contents).expect("Failed to deserialize JSON");
+
     let mut lang_to_extension: HashMap<String, String> = HashMap::new();
 
     for mapping in mappings {
@@ -71,7 +96,10 @@ pub fn get_lang_to_extension_mapping() -> HashMap<String, String> {
     lang_to_extension
 }
 
-fn generate_filename(enhanced_submission_details: &EnhancedSubmissionDetails, lang_names_to_extensions: &HashMap<String, String>) -> String {
+fn generate_filename(
+    enhanced_submission_details: &EnhancedSubmissionDetails,
+    lang_names_to_extensions: &HashMap<String, String>,
+) -> String {
     let language_name = &enhanced_submission_details.submission_details.lang.name;
     let binding = "txt".to_string();
     let extension = lang_names_to_extensions

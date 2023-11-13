@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Submission {
     pub id: String,
     pub status_display: String,
